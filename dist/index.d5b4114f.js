@@ -142,7 +142,7 @@
       this[globalName] = mainExports;
     }
   }
-})({"dkBBv":[function(require,module,exports) {
+})({"fNP1F":[function(require,module,exports) {
 "use strict";
 var HMR_HOST = null;
 var HMR_PORT = null;
@@ -519,23 +519,23 @@ function hmrAcceptRun(bundle, id) {
 }
 
 },{}],"2iQTb":[function(require,module,exports) {
+const NEWS_URL = "https://api.hnpwa.com/v0/news/1.json";
+const CONTENT_URL = "https://api.hnpwa.com/v0/item/@id.json";
+const rootEl = document.getElementById("root");
 const ajax = new XMLHttpRequest();
-const NEWS_URL = 'https://api.hnpwa.com/v0/news/1.json';
-const CONTENT_URL = 'https://api.hnpwa.com/v0/item/@id.json';
-const rootEl = document.getElementById('root');
 const store = {
     currentPage: 1,
     feeds: []
 };
-window.addEventListener('hashchange', router);
+window.addEventListener("hashchange", router);
 router();
 function makeFeeds(feeds) {
     for(let i = 0; i < feeds.length; i++)feeds[i].read = false;
     return feeds;
 }
 function showNewsFeed() {
-    let newsFeed = store.feeds;
-    if (newsFeed.length === 0) newsFeed = store.feeds = makeFeeds(getData(NEWS_URL));
+    let newsFeeds = store.feeds;
+    if (newsFeeds.length === 0) newsFeeds = store.feeds = makeFeeds(getData(NEWS_URL));
     const newsList = [];
     let template = `
     <div class="bg-gray-600 min-h-screen">
@@ -562,13 +562,13 @@ function showNewsFeed() {
   </div>
   `;
     for(let i = (store.currentPage - 1) * 10; i < store.currentPage * 10; i++){
-        if (!newsFeed[i]) continue;
-        newsList.push(getNewsTitle(newsFeed[i]));
+        if (!newsFeeds[i]) continue;
+        newsList.push(getNewsTitle(newsFeeds[i]));
     }
-    template = template.replace('{{__news_feed__}}', newsList.join(""));
-    template = template.replace('{{__prev_page__}}', String(store.currentPage > 1 ? store.currentPage - 1 : 1));
-    template = template.replace('{{__next_page__}}', String(store.currentPage + 1));
-    rootEl.innerHTML = template;
+    template = template.replace("{{__news_feed__}}", newsList.join(""));
+    template = template.replace("{{__prev_page__}}", String(store.currentPage > 1 ? store.currentPage - 1 : 1));
+    template = template.replace("{{__next_page__}}", String(store.currentPage + 1));
+    updateView(template);
 }
 function showNewsItem() {
     const id = location.hash.substr(7);
@@ -605,27 +605,32 @@ function showNewsItem() {
         store.feeds[i].read = true;
         break;
     }
-    rootEl.innerHTML = template.replace("{{__comments__}}", makeComment(newsContent.comments));
+    updateView(template.replace("{{__comments__}}", makeComment(newsContent.comments)));
 }
-function makeComment(comments, called = 0) {
+function updateView(html) {
+    if (rootEl != null) rootEl.innerHTML = html;
+    else console.error("최상위 컨테이너가 없어");
+}
+function makeComment(comments) {
     const commentString = [];
     for(let i = 0; i < comments.length; i++){
+        const comment = comments[i];
         commentString.push(`
-      <div style="padding-left: ${called * 40}px;" class="mt-4">
+      <div style="padding-left: ${comment.level * 40}px;" class="mt-4">
       <div class="text-gray-400">
         <i class="fa fa-sort-up mr-2"></i>
-        <strong>${comments[i].user}</strong> ${comments[i].time_ago}
+        <strong>${comment.user}</strong> ${comment.time_ago}
       </div>
-      <p class="text-gray-700">${comments[i].content}</p>
+      <p class="text-gray-700">${comment.content}</p>
     </div>     
     `);
-        if (comments[i].comments) commentString.push(makeComment(comments[i].comments, called + 1));
+        if (comment.comments) commentString.push(makeComment(comment.comments));
     }
     return commentString.join("");
 }
 function getNewsTitle(element) {
     return `
-  <div class="p-6 ${element.read ? 'bg-red-500' : 'bg-white'} mt-6 rounded-lg shadow-md transition-colors duration-500 hover:bg-green-100">
+  <div class="p-6 ${element.read ? "bg-red-500" : "bg-white"} mt-6 rounded-lg shadow-md transition-colors duration-500 hover:bg-green-100">
         <div class="flex">
           <div class="flex-auto">
             <a href="#/show/${element.id}">${element.title}</a>  
@@ -645,20 +650,20 @@ function getNewsTitle(element) {
   `;
 }
 function getData(url) {
-    ajax.open('GET', url, false);
+    ajax.open("GET", url, false);
     ajax.send();
     return JSON.parse(ajax.response);
 }
 function router() {
     const routePath = location.hash;
     console.log(routePath);
-    if (routePath === '') showNewsFeed();
-    else if (routePath.indexOf('#/page/') >= 0) {
+    if (routePath === "") showNewsFeed();
+    else if (routePath.indexOf("#/page/") >= 0) {
         store.currentPage = Number(routePath.substr(7));
         showNewsFeed();
     } else showNewsItem();
 }
 
-},{}]},["dkBBv","2iQTb"], "2iQTb", "parcelRequire94c2")
+},{}]},["fNP1F","2iQTb"], "2iQTb", "parcelRequire94c2")
 
 //# sourceMappingURL=index.d5b4114f.js.map
