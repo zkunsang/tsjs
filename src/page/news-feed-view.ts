@@ -1,6 +1,9 @@
+import { NEWS_URL } from '../config';
 import { NewsFeedApi } from '../core/api';
 import View from '../core/view';
-import { NewsStore } from '../types';
+import { NewsFeed, NewsStore } from '../types';
+
+
 
 
 const template = `
@@ -36,16 +39,31 @@ export default class NewsFeedView extends View {
     super(containerId, template);
 
     this.store = store;
-    this.api = new NewsFeedApi();
+    this.api = new NewsFeedApi(NEWS_URL);
     
 
-    if (this.store.hasFeeds) {
-      this.store.setFeeds(this.api.getData())
+    
+  }
+// render 는 라우터가 호출 해
+        // 순서가 -> 
+        // 생성자가 호출
+        // 에이피 아이
+        // 렌더
+
+  render = (page: string = '1'): void => {
+    this.store.currentPage = Number(page);
+
+    if (!this.store.hasFeeds) {
+      this.api.getDataWithPromise((data: NewsFeed[]) => {
+        this.store.setFeeds(data);
+        this.renderView();
+      });
     }
+
+    this.renderView();
   }
 
-  render(): void {
-    this.store.currentPage = Number(location.hash.substr(7) || 1);
+  renderView = () => {
     for (let i = (this.store.currentPage - 1) * 10; i < this.store.currentPage * 10; i++) {
       if (!this.store.getFeed(i)) continue;
       const { id, title, comments_count, user, points, time_ago, read } = this.store.getFeed(i);

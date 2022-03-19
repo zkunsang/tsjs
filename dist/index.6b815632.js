@@ -532,14 +532,14 @@ const rootEl = document.getElementById("root");
 // 상속의 관계를 바꾸고 싶다면 구조를 바꿔야 함 -> 유연성이 필요함
 // 2. 다중 상속을 지원하지 않아.
 const router = new _routerDefault.default();
-const newsFeedView = new _page.NewsFeedView('root');
-const newsDetailView = new _page.NewsDetailView('root');
+const newsFeedView = new _page.NewsFeedView('root', store);
+const newsDetailView = new _page.NewsDetailView('root', store);
 router.addRoutePath('/page/', newsFeedView);
 router.addRoutePath('/show/', newsDetailView);
 router.setDefaultPage(newsFeedView);
 router.route();
 
-},{"./core/router":"f4hn2","./page":"4GSC5","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6","./store":"1eAgN"}],"f4hn2":[function(require,module,exports) {
+},{"./core/router":"f4hn2","./page":"4GSC5","./store":"1eAgN","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}],"f4hn2":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>Router
@@ -622,6 +622,7 @@ parcelHelpers.export(exports, "default", ()=>NewsDetailView
 var _view = require("../core/view");
 var _viewDefault = parcelHelpers.interopDefault(_view);
 var _api = require("../core/api");
+var _config = require("../config");
 const template = `
 <div class="bg-gray-600 min-h-screen pb-8">
 <div class="bg-white text-xl">
@@ -656,14 +657,16 @@ class NewsDetailView extends _viewDefault.default {
     }
     render() {
         const id = location.hash.substr(7);
-        const api = new _api.NewsDetailApi();
-        const newDetail = api.getData(id);
-        this.store.makeRead(Number(id));
-        this.setTemplateData("comments", this.makeComment(newDetail.comments));
-        this.setTemplateData("currentPage", String(this.store.currentPage));
-        this.setTemplateData("title", newDetail.title);
-        this.setTemplateData("content", newDetail.content);
-        this.updateView();
+        const api = new _api.NewsDetailApi(_config.CONTENT_URL.replace("@id", id));
+        api.getDataWithPromise((data)=>{
+            const { title , content , comments  } = data;
+            this.store.makeRead(Number(id));
+            this.setTemplateData("comments", this.makeComment(comments));
+            this.setTemplateData("currentPage", String(this.store.currentPage));
+            this.setTemplateData("title", title);
+            this.setTemplateData("content", content);
+            this.updateView();
+        });
     }
     makeComment(comments) {
         for(let i = 0; i < comments.length; i++){
@@ -683,7 +686,7 @@ class NewsDetailView extends _viewDefault.default {
     }
 }
 
-},{"../core/view":"gCNZN","../core/api":"5JfgJ","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}],"gCNZN":[function(require,module,exports) {
+},{"../core/view":"gCNZN","../core/api":"5JfgJ","../config":"gTux2","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}],"gCNZN":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>View
@@ -725,14 +728,32 @@ parcelHelpers.export(exports, "Api", ()=>Api
 parcelHelpers.export(exports, "NewsFeedApi", ()=>NewsFeedApi
 );
 parcelHelpers.export(exports, "NewsDetailApi", ()=>NewsDetailApi
-);
-var _config = require("../config");
+) // export interface NewsFeedApi extends Api { };
+ // export interface NewsDetailApi extends Api { };
+ // applyApiMixins(NewsFeedApi, [Api]);
+ // applyApiMixins(NewsDetailApi, [Api]);
+;
 class Api {
-    getRequest(url) {
-        const ajax = new XMLHttpRequest();
-        ajax.open('Get', url, false);
-        ajax.send();
-        return JSON.parse(ajax.response);
+    constructor(url){
+        this.xhr = new XMLHttpRequest();
+        this.url = url;
+    }
+    getRequestWithXHR(cb) {
+        this.xhr.open('Get', this.url, false);
+        this.xhr.addEventListener('load', ()=>{
+            cb(JSON.parse(this.xhr.response));
+        });
+        this.xhr.send();
+    }
+    getRequestWithPromise(cb) {
+        // xhr 보다는
+        // 최신 버젼의 api(fetch) , promise베이스
+        // json.parse가 동기적으로 작동하게 되어있다. 느려서 멈추게 됨.
+        // json자체도 비동기로 
+        fetch(this.url).then((response)=>response.json()
+        ).then(cb).catch(()=>{
+            console.error('error occured');
+        });
     }
 }
 function applyApiMixins(targetClass, baseClasses) {
@@ -744,24 +765,30 @@ function applyApiMixins(targetClass, baseClasses) {
         });
     });
 }
-class NewsFeedApi {
-    getData() {
-        return this.getRequest(_config.NEWS_URL);
+class NewsFeedApi extends Api {
+    constructor(url){
+        super(url);
+    }
+    getDataWithXHR(cb) {
+        this.getRequestWithXHR(cb);
+    }
+    getDataWithPromise(cb) {
+        this.getRequestWithPromise(cb);
     }
 }
-class NewsDetailApi {
-    getData(id) {
-        return this.getRequest(_config.CONTENT_URL.replace("@id", id));
+class NewsDetailApi extends Api {
+    constructor(url){
+        super(url);
+    }
+    getDataWithXHR(cb) {
+        this.getRequestWithXHR(cb);
+    }
+    getDataWithPromise(cb) {
+        this.getRequestWithPromise(cb);
     }
 }
-applyApiMixins(NewsFeedApi, [
-    Api
-]);
-applyApiMixins(NewsDetailApi, [
-    Api
-]);
 
-},{"../config":"gTux2","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}],"gTux2":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}],"gTux2":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "NEWS_URL", ()=>NEWS_URL
@@ -776,6 +803,7 @@ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>NewsFeedView
 );
+var _config = require("../config");
 var _api = require("../core/api");
 var _view = require("../core/view");
 var _viewDefault = parcelHelpers.interopDefault(_view);
@@ -806,16 +834,24 @@ const template = `
 class NewsFeedView extends _viewDefault.default {
     constructor(containerId, store){
         super(containerId, template);
-        this.store = store;
-        this.api = new _api.NewsFeedApi();
-        if (this.store.hasFeeds) this.store.setFeeds(this.api.getData());
-    }
-    render() {
-        this.store.currentPage = Number(location.hash.substr(7) || 1);
-        for(let i = (this.store.currentPage - 1) * 10; i < this.store.currentPage * 10; i++){
-            if (!this.store.getFeed(i)) continue;
-            const { id , title , comments_count , user , points , time_ago , read  } = this.store.getFeed(i);
-            this.addHtml(`
+        // render 는 라우터가 호출 해
+        // 순서가 -> 
+        // 생성자가 호출
+        // 에이피 아이
+        // 렌더
+        this.render = (page = '1')=>{
+            this.store.currentPage = Number(page);
+            if (!this.store.hasFeeds) this.api.getDataWithPromise((data)=>{
+                this.store.setFeeds(data);
+                this.renderView();
+            });
+            this.renderView();
+        };
+        this.renderView = ()=>{
+            for(let i = (this.store.currentPage - 1) * 10; i < this.store.currentPage * 10; i++){
+                if (!this.store.getFeed(i)) continue;
+                const { id , title , comments_count , user , points , time_ago , read  } = this.store.getFeed(i);
+                this.addHtml(`
       <div class="p-6 ${read ? "bg-red-500" : "bg-white"} mt-6 rounded-lg shadow-md transition-colors duration-500 hover:bg-green-100">
             <div class="flex">
               <div class="flex-auto">
@@ -834,15 +870,18 @@ class NewsFeedView extends _viewDefault.default {
             </div>
           </div>    
       `);
-        }
-        this.setTemplateData("news_feed", this.getHtml());
-        this.setTemplateData("prev_page", String(this.store.prevPage));
-        this.setTemplateData("next_page", String(this.store.nextPage));
-        this.updateView();
+            }
+            this.setTemplateData("news_feed", this.getHtml());
+            this.setTemplateData("prev_page", String(this.store.prevPage));
+            this.setTemplateData("next_page", String(this.store.nextPage));
+            this.updateView();
+        };
+        this.store = store;
+        this.api = new _api.NewsFeedApi(_config.NEWS_URL);
     }
 }
 
-},{"../core/api":"5JfgJ","../core/view":"gCNZN","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}],"1eAgN":[function(require,module,exports) {
+},{"../config":"gTux2","../core/api":"5JfgJ","../core/view":"gCNZN","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}],"1eAgN":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>Store

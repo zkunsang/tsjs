@@ -12,6 +12,7 @@ export interface NewsStore {
   nextPage: number;
   prevPage: number;
 }
+
 export interface RouteInfo {
   path: string;
   page: View;

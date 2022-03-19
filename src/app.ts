@@ -12,8 +12,8 @@ const rootEl: HTMLElement | null = document.getElementById("root");
 // 2. 다중 상속을 지원하지 않아.
 
 const router: Router = new Router();
-const newsFeedView = new NewsFeedView('root');
-const newsDetailView = new NewsDetailView('root');
+const newsFeedView = new NewsFeedView('root', store);
+const newsDetailView = new NewsDetailView('root', store);
 
 router.addRoutePath('/page/', newsFeedView);
 router.addRoutePath('/show/', newsDetailView);
