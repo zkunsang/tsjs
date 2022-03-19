@@ -1,6 +1,8 @@
-import { Store } from './types';
 import Router from './core/router';
 import { NewsFeedView, NewsDetailView } from './page';
+import Store from './store';
+
+const store = new Store();
 
 const rootEl: HTMLElement | null = document.getElementById("root");
 // 왜 믹스인을 써야 할까?
@@ -8,19 +10,6 @@ const rootEl: HTMLElement | null = document.getElementById("root");
 // 상속의 관계를 바꾸고 싶다면 구조를 바꿔야 함 -> 유연성이 필요함
 
 // 2. 다중 상속을 지원하지 않아.
-
-const store: Store = {
-  currentPage: 1,
-  feeds: [],
-};
-
-declare global {
-  interface Window {
-    store: Store;
-  }
-}
-
-window.store = store;
 
 const router: Router = new Router();
 const newsFeedView = new NewsFeedView('root');

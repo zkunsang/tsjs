@@ -523,16 +523,14 @@ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 var _router = require("./core/router");
 var _routerDefault = parcelHelpers.interopDefault(_router);
 var _page = require("./page");
+var _store = require("./store");
+var _storeDefault = parcelHelpers.interopDefault(_store);
+const store = new _storeDefault.default();
 const rootEl = document.getElementById("root");
 // 왜 믹스인을 써야 할까?
 // 1. 기존에 extends상속 방법은 적시 되어야 하는 상속 방법
 // 상속의 관계를 바꾸고 싶다면 구조를 바꿔야 함 -> 유연성이 필요함
 // 2. 다중 상속을 지원하지 않아.
-const store = {
-    currentPage: 1,
-    feeds: []
-};
-window.store = store;
 const router = new _routerDefault.default();
 const newsFeedView = new _page.NewsFeedView('root');
 const newsDetailView = new _page.NewsDetailView('root');
@@ -541,7 +539,7 @@ router.addRoutePath('/show/', newsDetailView);
 router.setDefaultPage(newsFeedView);
 router.route();
 
-},{"./core/router":"f4hn2","./page":"4GSC5","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}],"f4hn2":[function(require,module,exports) {
+},{"./core/router":"f4hn2","./page":"4GSC5","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6","./store":"1eAgN"}],"f4hn2":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>Router
@@ -652,19 +650,17 @@ const template = `
 </div>
 </div>`;
 class NewsDetailView extends _viewDefault.default {
-    constructor(containerId){
+    constructor(containerId, store){
         super(containerId, template);
+        this.store = store;
     }
     render() {
         const id = location.hash.substr(7);
         const api = new _api.NewsDetailApi();
         const newDetail = api.getData(id);
-        for(let i = 0; i < window.store.feeds.length; i++)if (window.store.feeds[i].id === Number(id)) {
-            window.store.feeds[i].read = true;
-            break;
-        }
+        this.store.makeRead(Number(id));
         this.setTemplateData("comments", this.makeComment(newDetail.comments));
-        this.setTemplateData("currentPage", String(window.store.currentPage));
+        this.setTemplateData("currentPage", String(this.store.currentPage));
         this.setTemplateData("title", newDetail.title);
         this.setTemplateData("content", newDetail.content);
         this.updateView();
@@ -808,20 +804,17 @@ const template = `
 </div>
 `;
 class NewsFeedView extends _viewDefault.default {
-    constructor(containerId){
+    constructor(containerId, store){
         super(containerId, template);
+        this.store = store;
         this.api = new _api.NewsFeedApi();
-        this.feeds = window.store.feeds;
-        if (this.feeds.length === 0) {
-            this.feeds = window.store.feeds = this.api.getData();
-            this.makeFeeds();
-        }
+        if (this.store.hasFeeds) this.store.setFeeds(this.api.getData());
     }
     render() {
-        window.store.currentPage = Number(location.hash.substr(7) || 1);
-        for(let i = (window.store.currentPage - 1) * 10; i < window.store.currentPage * 10; i++){
-            if (!this.feeds[i]) continue;
-            const { id , title , comments_count , user , points , time_ago , read  } = this.feeds[i];
+        this.store.currentPage = Number(location.hash.substr(7) || 1);
+        for(let i = (this.store.currentPage - 1) * 10; i < this.store.currentPage * 10; i++){
+            if (!this.store.getFeed(i)) continue;
+            const { id , title , comments_count , user , points , time_ago , read  } = this.store.getFeed(i);
             this.addHtml(`
       <div class="p-6 ${read ? "bg-red-500" : "bg-white"} mt-6 rounded-lg shadow-md transition-colors duration-500 hover:bg-green-100">
             <div class="flex">
@@ -843,15 +836,60 @@ class NewsFeedView extends _viewDefault.default {
       `);
         }
         this.setTemplateData("news_feed", this.getHtml());
-        this.setTemplateData("prev_page", String(window.store.currentPage > 1 ? window.store.currentPage - 1 : 1));
-        this.setTemplateData("next_page", String(window.store.currentPage + 1));
+        this.setTemplateData("prev_page", String(this.store.prevPage));
+        this.setTemplateData("next_page", String(this.store.nextPage));
         this.updateView();
-    }
-    makeFeeds() {
-        for(let i = 0; i < this.feeds.length; i++)this.feeds[i].read = false;
     }
 }
 
-},{"../core/api":"5JfgJ","../core/view":"gCNZN","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}]},["gtZqc","kuM8f"], "kuM8f", "parcelRequire94c2")
+},{"../core/api":"5JfgJ","../core/view":"gCNZN","@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}],"1eAgN":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>Store
+);
+class Store {
+    constructor(){
+        this.feeds = [];
+        this._currentPage = 1;
+    }
+    get currentPage() {
+        return this._currentPage;
+    }
+    set currentPage(page) {
+        this._currentPage = page;
+    }
+    get nextPage() {
+        return this._currentPage + 1;
+    }
+    get prevPage() {
+        return this._currentPage > 1 ? this._currentPage - 1 : 1;
+    }
+    get numberOfFeed() {
+        return this.feeds.length;
+    }
+    get hasFeeds() {
+        return this.feeds.length > 0;
+    }
+    getAllFeeds() {
+        return this.feeds;
+    }
+    getFeed(position) {
+        return this.feeds[position];
+    }
+    setFeeds(feeds) {
+        this.feeds = feeds.map((feed)=>({
+                ...feed,
+                read: false
+            })
+        );
+    }
+    makeRead(id) {
+        const feed = this.feeds.find((item)=>item.id === id
+        );
+        if (feed) feed.read = true;
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"43Ip6"}]},["gtZqc","kuM8f"], "kuM8f", "parcelRequire94c2")
 
 //# sourceMappingURL=index.6b815632.js.map
