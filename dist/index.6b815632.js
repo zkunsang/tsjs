@@ -655,18 +655,17 @@ class NewsDetailView extends _viewDefault.default {
         super(containerId, template);
         this.store = store;
     }
-    render() {
+    async render() {
         const id = location.hash.substr(7);
         const api = new _api.NewsDetailApi(_config.CONTENT_URL.replace("@id", id));
-        api.getDataWithPromise((data)=>{
-            const { title , content , comments  } = data;
-            this.store.makeRead(Number(id));
-            this.setTemplateData("comments", this.makeComment(comments));
-            this.setTemplateData("currentPage", String(this.store.currentPage));
-            this.setTemplateData("title", title);
-            this.setTemplateData("content", content);
-            this.updateView();
-        });
+        const data = await api.getData();
+        const { title , content , comments  } = data;
+        this.store.makeRead(Number(id));
+        this.setTemplateData("comments", this.makeComment(comments));
+        this.setTemplateData("currentPage", String(this.store.currentPage));
+        this.setTemplateData("title", title);
+        this.setTemplateData("content", content);
+        this.updateView();
     }
     makeComment(comments) {
         for(let i = 0; i < comments.length; i++){
@@ -738,22 +737,9 @@ class Api {
         this.xhr = new XMLHttpRequest();
         this.url = url;
     }
-    getRequestWithXHR(cb) {
-        this.xhr.open('Get', this.url, false);
-        this.xhr.addEventListener('load', ()=>{
-            cb(JSON.parse(this.xhr.response));
-        });
-        this.xhr.send();
-    }
-    getRequestWithPromise(cb) {
-        // xhr 보다는
-        // 최신 버젼의 api(fetch) , promise베이스
-        // json.parse가 동기적으로 작동하게 되어있다. 느려서 멈추게 됨.
-        // json자체도 비동기로 
-        fetch(this.url).then((response)=>response.json()
-        ).then(cb).catch(()=>{
-            console.error('error occured');
-        });
+    async request() {
+        const response = await fetch(this.url);
+        return await response.json();
     }
 }
 function applyApiMixins(targetClass, baseClasses) {
@@ -769,22 +755,16 @@ class NewsFeedApi extends Api {
     constructor(url){
         super(url);
     }
-    getDataWithXHR(cb) {
-        this.getRequestWithXHR(cb);
-    }
-    getDataWithPromise(cb) {
-        this.getRequestWithPromise(cb);
+    async getData() {
+        return await this.request();
     }
 }
 class NewsDetailApi extends Api {
     constructor(url){
         super(url);
     }
-    getDataWithXHR(cb) {
-        this.getRequestWithXHR(cb);
-    }
-    getDataWithPromise(cb) {
-        this.getRequestWithPromise(cb);
+    async getData() {
+        return await this.request();
     }
 }
 
@@ -839,12 +819,12 @@ class NewsFeedView extends _viewDefault.default {
         // 생성자가 호출
         // 에이피 아이
         // 렌더
-        this.render = (page = '1')=>{
+        this.render = async (page = '1')=>{
             this.store.currentPage = Number(page);
-            if (!this.store.hasFeeds) this.api.getDataWithPromise((data)=>{
+            if (!this.store.hasFeeds) {
+                const data = await this.api.getData();
                 this.store.setFeeds(data);
-                this.renderView();
-            });
+            }
             this.renderView();
         };
         this.renderView = ()=>{

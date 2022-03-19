@@ -40,24 +40,19 @@ export default class NewsFeedView extends View {
 
     this.store = store;
     this.api = new NewsFeedApi(NEWS_URL);
-    
-
-    
   }
-// render 는 라우터가 호출 해
-        // 순서가 -> 
-        // 생성자가 호출
-        // 에이피 아이
-        // 렌더
+  // render 는 라우터가 호출 해
+  // 순서가 -> 
+  // 생성자가 호출
+  // 에이피 아이
+  // 렌더
 
-  render = (page: string = '1'): void => {
+  render = async (page: string = '1'): Promise<void> => {
     this.store.currentPage = Number(page);
 
     if (!this.store.hasFeeds) {
-      this.api.getDataWithPromise((data: NewsFeed[]) => {
-        this.store.setFeeds(data);
-        this.renderView();
-      });
+      const data = await this.api.getData();
+      this.store.setFeeds(data);
     }
 
     this.renderView();

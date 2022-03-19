@@ -7,6 +7,10 @@
     "noImplicitAny": true,
     "noImplicitThis": true,
     "sourceMap": true,
-    "downlevelIteration": true
+    "downlevelIteration": true,
+    "lib": [
+      "es6",
+      "dom"
+    ]
   }
 }
