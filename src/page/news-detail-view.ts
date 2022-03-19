@@ -40,7 +40,7 @@ export default class NewsDetailView extends View {
     this.store = store;
   }
 
-  async render() {
+  async render(): Promise<void> {
     const id = location.hash.substr(7);
     const api = new NewsDetailApi(CONTENT_URL.replace("@id", id));
 
