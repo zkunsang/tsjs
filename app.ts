@@ -2,7 +2,34 @@ const NEWS_URL = "https://api.hnpwa.com/v0/news/1.json";
 const CONTENT_URL = "https://api.hnpwa.com/v0/item/@id.json";
 
 const rootEl: HTMLElement | null = document.getElementById("root");
-const ajax: XMLHttpRequest = new XMLHttpRequest();
+
+class Api {
+  url: string;
+  ajax: XMLHttpRequest;
+
+  constructor(url: string) {
+    this.url = url;
+    this.ajax = new XMLHttpRequest();
+  }
+
+  protected getRequest<AjaxResoponse>(): AjaxResoponse {
+    this.ajax.open('Get', this.url, false);
+    this.ajax.send();
+    
+    return JSON.parse(this.ajax.response);
+  }
+}
+
+class NewsFeedApi extends Api {
+  getData(): NewsFeed[] {
+    return this.getRequest<NewsFeed[]>();
+  }
+}
+class NewsDetailApi extends Api {
+  getData(): NewsDetail {
+    return this.getRequest<NewsDetail>();
+  }  
+}
 
 interface Store {
   currentPage: number;
@@ -51,10 +78,11 @@ function makeFeeds(feeds: NewsFeed[]) {
 }
 
 function showNewsFeed() {
+  const api = new NewsFeedApi(NEWS_URL);
   let newsFeeds: NewsFeed[] = store.feeds;
 
   if (newsFeeds.length === 0) {
-    newsFeeds = store.feeds = makeFeeds(getData<NewsFeed[]>(NEWS_URL));
+    newsFeeds = store.feeds = makeFeeds(api.getData());
   }
 
   const newsList = [];
@@ -103,8 +131,9 @@ function showNewsFeed() {
 
 function showNewsItem() {
   const id = location.hash.substr(7);
-
-  const newsContent = getData<NewsDetail>(CONTENT_URL.replace("@id", id));
+  const api = new NewsDetailApi(CONTENT_URL.replace("@id", id));
+  
+  const newsContent = api.getData();
 
   const template = `
   <div class="bg-gray-600 min-h-screen pb-8">
@@ -204,25 +233,7 @@ function getNewsTitle(element: NewsFeed): string {
   `;
 }
 
-class Api {
-  url: string;
-  ajax: XMLHttpRequest;
 
-  constructor(url: string) {
-    this.url = url;
-    this.ajax = new XMLHttpRequest();
-  }
-}
-
-class NewsFeedApi extends Api {
-  getData(): NewsFeed[] {}
-}
-function getData<T>(url: string): T {
-  ajax.open("GET", url, false);
-  ajax.send();
-
-  return JSON.parse(ajax.response);
-}
 
 function router(): void {
   const routePath = location.hash;

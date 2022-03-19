@@ -142,7 +142,7 @@
       this[globalName] = mainExports;
     }
   }
-})({"fNP1F":[function(require,module,exports) {
+})({"dkBBv":[function(require,module,exports) {
 "use strict";
 var HMR_HOST = null;
 var HMR_PORT = null;
@@ -522,7 +522,27 @@ function hmrAcceptRun(bundle, id) {
 const NEWS_URL = "https://api.hnpwa.com/v0/news/1.json";
 const CONTENT_URL = "https://api.hnpwa.com/v0/item/@id.json";
 const rootEl = document.getElementById("root");
-const ajax = new XMLHttpRequest();
+class Api {
+    constructor(url){
+        this.url = url;
+        this.ajax = new XMLHttpRequest();
+    }
+    getRequest() {
+        this.ajax.open('Get', this.url, false);
+        this.ajax.send();
+        return JSON.parse(this.ajax.response);
+    }
+}
+class NewsFeedApi extends Api {
+    getData() {
+        return this.getRequest();
+    }
+}
+class NewsDetailApi extends Api {
+    getData() {
+        return this.getRequest();
+    }
+}
 const store = {
     currentPage: 1,
     feeds: []
@@ -534,8 +554,9 @@ function makeFeeds(feeds) {
     return feeds;
 }
 function showNewsFeed() {
+    const api = new NewsFeedApi(NEWS_URL);
     let newsFeeds = store.feeds;
-    if (newsFeeds.length === 0) newsFeeds = store.feeds = makeFeeds(getData(NEWS_URL));
+    if (newsFeeds.length === 0) newsFeeds = store.feeds = makeFeeds(api.getData());
     const newsList = [];
     let template = `
     <div class="bg-gray-600 min-h-screen">
@@ -572,7 +593,8 @@ function showNewsFeed() {
 }
 function showNewsItem() {
     const id = location.hash.substr(7);
-    const newsContent = getData(CONTENT_URL.replace("@id", id));
+    const api = new NewsDetailApi(CONTENT_URL.replace("@id", id));
+    const newsContent = api.getData();
     const template = `
   <div class="bg-gray-600 min-h-screen pb-8">
   <div class="bg-white text-xl">
@@ -649,11 +671,6 @@ function getNewsTitle(element) {
       </div>    
   `;
 }
-function getData(url) {
-    ajax.open("GET", url, false);
-    ajax.send();
-    return JSON.parse(ajax.response);
-}
 function router() {
     const routePath = location.hash;
     console.log(routePath);
@@ -664,6 +681,6 @@ function router() {
     } else showNewsItem();
 }
 
-},{}]},["fNP1F","2iQTb"], "2iQTb", "parcelRequire94c2")
+},{}]},["dkBBv","2iQTb"], "2iQTb", "parcelRequire94c2")
 
 //# sourceMappingURL=index.d5b4114f.js.map
